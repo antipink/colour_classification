@@ -1,0 +1,11 @@
+*.jpg
+*.png
+*.weights
+*.h5
+Graph/
+Colour/
+Family/
+Category/
+Images/
+
+
