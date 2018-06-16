@@ -22,12 +22,13 @@ from keras.layers import Dense, Flatten
 from keras.models import Model
 from keras.callbacks import ModelCheckpoint
 import tensorflow as tf
-from keras.layers import  GlobalMaxPooling2D, Dropout
+from keras.layers import  GlobalMaxPooling2D, Dropout,GlobalAveragePooling2D
+from keras import optimizers
 #from tf.keras.utils import multi_gpu_model
 
 batch_size = 16
 nb_classes = 13
-nb_epoch = 20
+nb_epoch = 50
 data_augmentation = False
 # input image dimensions
 img_rows, img_cols = 224, 224
@@ -39,20 +40,29 @@ file_name = 'Colour/'
 base_model = ResNet50(include_top = False, weights='imagenet', input_shape = (img_rows,img_cols,3))
 # x = Flatten()
 x = GlobalMaxPooling2D()(base_model.output)
-x = Dropout(0.5)(x)
-x = Dense(nb_classes, activation = 'softmax')(x)
+#x = GlobalAveragePooling2D((7, 7), name='avg_pool')(base_model.output)
+x = Flatten()(x)
+x = Dense(nb_classes, activation='softmax')(x)
+#x = Dense(nb_classes, activation = 'softmax')(x)
 parallel_model = Model(base_model.input, x)
 
+
+for layer in parallel_model.layers[-3:]:
+    layer.trainable = True
+for layer in parallel_model.layers[:-3]:
+    layer.trainable = False
 #parallel_model = multi_gpu_model(model, gpus=2)
 
+
+opt = optimizers.adam(lr =0.01)
 parallel_model.compile(loss='categorical_crossentropy',
-              optimizer='adam',
+              optimizer=opt,
               metrics=['accuracy'])
 
 
 # lr_reducer = ReduceLROnPlateau(factor=np.sqrt(0.1), cooldown=0, patience=5, min_lr=0.5e-6)
-# early_stopper = EarlyStopping(min_delta=0.001, patience=10)
-# csv_logger = CSVLogger('resnet18_cifar10.csv')
+early_stopper = EarlyStopping(min_delta=0.001, patience=6)
+
 
 
 
@@ -168,10 +178,11 @@ tbCallBack = TensorBoard(log_dir='./Graph')
 #                         validation_data=(X_test, Y_test),
 #                         epochs=nb_epoch, verbose=1, max_q_size=100,
 #                         callbacks=[lr_reducer, early_stopper, csv_logger, tbCallBack])
-checkpointer = ModelCheckpoint(filepath='./weights/weights.hdf5', verbose=1, save_best_only=True)
+checkpointer = ModelCheckpoint(filepath='./weights/weights.h5', verbose=1, save_best_only=True)
 parallel_model.fit_generator(train_generator,
                     # steps_per_epoch=X_train.shape[0] // batch_size,
                     steps_per_epoch = train_generator.samples // train_generator.batch_size,
                     validation_data = valid_generator,
-                    epochs=nb_epoch, verbose=1, max_queue_size=100,
-                    callbacks=[tbCallBack, checkpointer])
+                    validation_steps = valid_generator.samples // valid_generator.batch_size, 
+                    epochs=nb_epoch, verbose=1,
+                    callbacks=[tbCallBack, checkpointer, early_stopper])

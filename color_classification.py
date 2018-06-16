@@ -29,14 +29,14 @@ import resnet
 from keras import optimizers
 from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import ReduceLROnPlateau, CSVLogger, EarlyStopping, TensorBoard, ModelCheckpoint
-
+from keras.applications.vgg16 import VGG16
 
 
 batch_size = 32
 nb_classes = 13
-nb_epoch = 20
+nb_epoch = 100
 # data_augmentation = False
-img_rows, img_cols = 64, 64
+img_rows, img_cols = 128, 128
 img_channels = 3
 file_name = 'Colour/'
 
@@ -60,14 +60,15 @@ def balanced_loss(y_true, y_pred):
 
     return modified_error
 
-train_datagen = ImageDataGenerator(rescale=1. / 255, shear_range=0.2, zoom_range=0.2, horizontal_flip=True, validation_split = 0.3)
+train_datagen = ImageDataGenerator(samplewise_center = True, samplewise_std_normalization = True, shear_range=0.2, zoom_range=0.2, horizontal_flip=True, validation_split = 0.2)
 
 training_set = train_datagen.flow_from_directory(file_name, target_size=(img_rows, img_rows), batch_size=batch_size, class_mode = 'categorical', subset ='training')
 
 test_set = train_datagen.flow_from_directory(file_name, target_size=(img_rows, img_rows), batch_size=batch_size, class_mode = 'categorical', subset ='validation')
 
-
-model = resnet.ResnetBuilder.build_resnet_18((img_channels, img_rows, img_cols), nb_classes)
+model = VGG16(weights= 'imagenet',include_top=False, input_shape= (200, 200, 3))
+#model = resnet.ResnetBuilder.build_resnet_50((img_channels, img_rows, img_cols), nb_classes)
+model.summary()
 
 opt = optimizers.adam(lr=0.01)
 model.compile(loss='categorical_crossentropy',
