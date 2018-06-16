@@ -34,7 +34,7 @@ from keras.models import Model
 
 batch_size = 32
 nb_classes = 12
-nb_epoch = 5
+nb_epoch = 3
 # data_augmentation = False
 img_rows, img_cols = 64, 64
 img_channels = 3
@@ -60,10 +60,14 @@ def balanced_loss(y_true, y_pred):
 
     return modified_error
 
-# rgb_mean = [0.485, 0.456, 0.406]
-# rgb_std = [0.229,0.224,0.225]
+rgb_mean = [0.485, 0.456, 0.406]
+rgb_std = [0.229,0.224,0.225]
 
-train_datagen = ImageDataGenerator(samplewise_center = True, samplewise_std_normalization = True, rotation_range=20, zoom_range=0.2, horizontal_flip=True, vertical_flip = True ,validation_split = 0.2)
+def preprocess(img):
+    img = (img.astype("float")/255 -rgb_mean)/rgb_std
+    return img
+
+train_datagen = ImageDataGenerator(rotation_range=20, zoom_range=0.2, horizontal_flip=True, vertical_flip = True ,validation_split = 0.2, preprocessing_function = preprocess)
 #train_datagen = ImageDataGenerator(samplewise_center = True, samplewise_std_normalization = True, shear_range=0.2, zoom_range=0.2, horizontal_flip=True, validation_split = 0.2)
 
 training_set = train_datagen.flow_from_directory(file_name, target_size=(img_rows, img_rows), batch_size=batch_size, class_mode = 'categorical', subset ='training')
@@ -74,33 +78,34 @@ test_set = train_datagen.flow_from_directory(file_name, target_size=(img_rows, i
 #x = Flatten()(base_model.output)
 #x = Dense(nb_classes, activation= 'softmax')(x)
 #model = Model(inputs= base_model.input,outputs= x)
-#model = resnet.ResnetBuilder.build_resnet_50((img_channels, img_rows, img_cols), nb_classes)
-model = Sequential()
-model.add(Conv2D(32, (3, 3), input_shape=(img_rows, img_cols, 3), activation='relu', padding ='same'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Conv2D(32, (3, 3), activation='relu', padding ='same'))
-#model.add(Conv2D(64, (3, 3), activation='relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-#
-model.add(Conv2D(64, (3, 3), activation='relu', padding ='same'))
-#model.add(Conv2D(128, (3, 3), activation='relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Conv2D(64, (3, 3), activation='relu', padding ='same'))
-#model.add(Conv2D(128, (3, 3), activation='relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-#model.add(Conv2D(128, (3, 3), activation='relu', padding ='same'))
-#model.add(Conv2D(128, (3, 3), activation='relu'))
-#model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Flatten())
-# Uses the Dense() to add the hidden layer and defines the number of nodes
-model.add(Dense(units=128, activation='relu'))
-model.add(Dropout(0.2))
-# Initialise Output layer, only one unit because its a binary classification
-model.add(Dense(12, activation='sigmoid'))
-model.summary()
+model = resnet.ResnetBuilder.build_resnet_18((img_channels, img_rows, img_cols), nb_classes)
+
+
+# model = Sequential()
+# model.add(Conv2D(32, (3, 3), input_shape=(img_rows, img_cols, 3), activation='relu', padding ='same'))
+# model.add(MaxPooling2D(pool_size=(2, 2)))
+# model.add(Conv2D(32, (3, 3), activation='relu', padding ='same'))
+# #model.add(Conv2D(64, (3, 3), activation='relu'))
+# model.add(MaxPooling2D(pool_size=(2, 2)))
+# #
+# model.add(Conv2D(64, (3, 3), activation='relu', padding ='same'))
+# #model.add(Conv2D(128, (3, 3), activation='relu'))
+# model.add(MaxPooling2D(pool_size=(2, 2)))
+# model.add(Conv2D(64, (3, 3), activation='relu', padding ='same'))
+# #model.add(Conv2D(128, (3, 3), activation='relu'))
+# model.add(MaxPooling2D(pool_size=(2, 2)))
+# #model.add(Conv2D(128, (3, 3), activation='relu', padding ='same'))
+# #model.add(Conv2D(128, (3, 3), activation='relu'))
+# #model.add(MaxPooling2D(pool_size=(2, 2)))
+# model.add(Flatten())
+# # Uses the Dense() to add the hidden layer and defines the number of nodes
+# model.add(Dense(128, activation='relu'))
+# # Initialise Output layer, only one unit because its a binary classification
+# model.add(Dense(nb_classes, activation='softmax'))
+# # model.summary()
 
 opt = optimizers.adam(lr=0.01)
-model.compile(loss='binary_crossentropy',
+model.compile(loss='categorical_crossentropy',
 			  optimizer=opt,
 			  metrics=['accuracy'])
 
