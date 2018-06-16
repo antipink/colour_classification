@@ -17,7 +17,7 @@ from keras.models import Sequential
 from keras.layers import Conv2D
 from keras.layers import MaxPooling2D
 from keras.layers import Flatten
-from keras.layers import Dense
+from keras.layers import Dense, Dropout
 import matplotlib.pyplot as plt
 from keras.preprocessing import image
 from tensorflow.contrib.keras import backend as cond
@@ -30,13 +30,13 @@ from keras import optimizers
 from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import ReduceLROnPlateau, CSVLogger, EarlyStopping, TensorBoard, ModelCheckpoint
 from keras.applications.vgg16 import VGG16
-
+from keras.models import Model
 
 batch_size = 32
 nb_classes = 13
 nb_epoch = 100
 # data_augmentation = False
-img_rows, img_cols = 128, 128
+img_rows, img_cols = 64, 64
 img_channels = 3
 file_name = 'Colour/'
 
@@ -60,21 +60,52 @@ def balanced_loss(y_true, y_pred):
 
     return modified_error
 
-train_datagen = ImageDataGenerator(samplewise_center = True, samplewise_std_normalization = True, shear_range=0.2, zoom_range=0.2, horizontal_flip=True, validation_split = 0.2)
+rgb_mean = [0.485, 0.456, 0.406]
+rgb_std = [0.229,0.224,0.225]
+
+train_datagen = ImageDataGenerator(samplewise_center = True, samplewise_std_normalization = True, rotation_range=20, zoom_range=0.2, horizontal_flip=True, vertical_flip = True ,validation_split = 0.2)
+#train_datagen = ImageDataGenerator(samplewise_center = True, samplewise_std_normalization = True, shear_range=0.2, zoom_range=0.2, horizontal_flip=True, validation_split = 0.2)
 
 training_set = train_datagen.flow_from_directory(file_name, target_size=(img_rows, img_rows), batch_size=batch_size, class_mode = 'categorical', subset ='training')
 
 test_set = train_datagen.flow_from_directory(file_name, target_size=(img_rows, img_rows), batch_size=batch_size, class_mode = 'categorical', subset ='validation')
 
-basemodel = VGG16(weights= 'imagenet',include_top=False, input_shape= (96, 96, 3))
-x = Flatten()(basemodel.output)
-x = Dense(nb_classes, activation= 'softmax')
+#base_model = VGG16(weights= 'imagenet',include_top=False, input_shape= (img_rows, img_cols, 3))
+#x = Flatten()(base_model.output)
+#x = Dense(nb_classes, activation= 'softmax')(x)
+#model = Model(inputs= base_model.input,outputs= x)
 #model = resnet.ResnetBuilder.build_resnet_50((img_channels, img_rows, img_cols), nb_classes)
-model = Model(model.input, x)
+model = Sequential()
+model.add(Conv2D(32, (3, 3), input_shape=(img_rows, img_cols, 3), activation='relu', padding ='same'))
+#model.add(Conv2D(32, (3, 3), activation='relu'))
+# Takes our Objects and adds it to the pooling layers
+# Also gathers the features of the photo
+model.add(MaxPooling2D(pool_size=(2, 2)))
+# Adding a second layer
+model.add(Conv2D(32, (3, 3), activation='relu', padding ='same'))
+#model.add(Conv2D(64, (3, 3), activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+#
+model.add(Conv2D(64, (3, 3), activation='relu', padding ='same'))
+#model.add(Conv2D(128, (3, 3), activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Conv2D(64, (3, 3), activation='relu', padding ='same'))
+#model.add(Conv2D(128, (3, 3), activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+#model.add(Conv2D(128, (3, 3), activation='relu', padding ='same'))
+#model.add(Conv2D(128, (3, 3), activation='relu'))
+#model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Flatten())
+# Uses the Dense() to add the hidden layer and defines the number of nodes
+model.add(Dense(units=128, activation='relu'))
+model.add(Dropout(0.2))
+# Initialise Output layer, only one unit because its a binary classification
+model.add(Dense(units=13, activation='sigmoid'))
+model.compile(optimizer='adam', loss=balanced_loss, metrics=['accuracy'])
 model.summary()
 
 opt = optimizers.adam(lr=0.01)
-model.compile(loss='categorical_crossentropy',
+model.compile(loss='binary_crossentropy',
 			  optimizer=opt,
 			  metrics=['accuracy'])
 
