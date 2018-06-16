@@ -66,8 +66,11 @@ training_set = train_datagen.flow_from_directory(file_name, target_size=(img_row
 
 test_set = train_datagen.flow_from_directory(file_name, target_size=(img_rows, img_rows), batch_size=batch_size, class_mode = 'categorical', subset ='validation')
 
-model = VGG16(weights= 'imagenet',include_top=False, input_shape= (200, 200, 3))
+basemodel = VGG16(weights= 'imagenet',include_top=False, input_shape= (96, 96, 3))
+x = Flatten()(basemodel.output)
+x = Dense(nb_classes, activation= 'softmax')
 #model = resnet.ResnetBuilder.build_resnet_50((img_channels, img_rows, img_cols), nb_classes)
+model = Model(model.input, x)
 model.summary()
 
 opt = optimizers.adam(lr=0.01)
