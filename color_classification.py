@@ -98,14 +98,13 @@ model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Flatten())
 # Uses the Dense() to add the hidden layer and defines the number of nodes
 model.add(Dense(units=128, activation='relu'))
-model.add(Dropout(0.2))
 # Initialise Output layer, only one unit because its a binary classification
 model.add(Dense(12, activation='softmax'))
 model.summary()
 
 
 
-model = resnet.ResnetBuilder.build_resnet_18((3, img_rows, img_cols), 12)
+# model = resnet.ResnetBuilder.build_resnet_18((3, img_rows, img_cols), 12)
 
 opt = optimizers.adam(lr=0.01, decay = 1e-3)
 model.compile(loss='categorical_crossentropy',
